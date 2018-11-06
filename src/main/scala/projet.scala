@@ -17,6 +17,8 @@ class S2() {
 
   import spark.implicits._
 
+  import org.apache.spark.sql.functions._
+
   /*Exemple de lecture d'un fichier JSON */
 
   val doc = spark.read.json("/users/Etu3/3200403/BDLE/arxiv_2018-10-18/arxiv_documents_2018-19-18.json")
@@ -52,8 +54,9 @@ class S2() {
   val prod_C = sameWeight.map{case Row(t1 : Long, p1 : String, t2 : Long, p2 : String, w1 : Double, w2 : Double) => (t1, p1, t2, p2, w1*w2, w1*w1, w2*w2)}
   val scal_C = prod_C.groupBy("_1","_2", "_3", "_4").sum("_5", "_6", "_7")
 
-  val matrix_C = scal_C.map{case (a, b, c, d, x : Long, y : Long, z : Long) => (a, b, c, d, x/Math.sqrt(y*z))}
+  val matrix_C = scal_C.map{case Row(a: Long, b: String, c: Long, d: String, x : Double, y : Double, z : Double) => (a, b, c, d, x/Math.sqrt(y*z))}
 
+  val moy = matrix_C.select(avg("_5"))
 
   //For KL Distance -> Abandonned
 
@@ -79,6 +82,14 @@ class S2() {
 
   val matrix_B = probas_B.groupBy("_1", "_2", "_3", "_4").sum("_5")
 
+
+  // Filtrage
+
+  val filteredB = matrix_B.filter($"sum(_5)" >= 0.9)
+
+  val sameB = filteredB.filter($"_1" === $"_3" || $"_2" === $"_4")
+
+  matrix_B.summary()
 
 
 } // fin de la classe
